@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pymongo
+face_recognition
+dlib
+opencv-python
+numpy
+python-dotenv

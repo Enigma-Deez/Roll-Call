@@ -86,7 +86,7 @@ exports.verifyQR = async (req, res) => {
     const status = now <= qrToken.expiresAt ? 'on-time' : 'late';
 
     // Mark QR as used
-    qrToken.used = true;
+    qrToken.used = true;chat
     await qrToken.save();
 
     // Log successful attendance
