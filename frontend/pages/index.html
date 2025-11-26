@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roll Call Demo</title>
+<style>
+  body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: Arial, sans-serif;
+    background: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  section {
+    display: none;
+    width: 90%;
+    max-width: 500px;
+    margin: auto;
+    text-align: center;
+  }
+
+  section.active { display: block; }
+
+  /* Landing button */
+  #startBtn {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: none;
+    background: #4CAF50;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+    animation: pulse 2s infinite;
+  }
+
+  #startBtn::before {
+    content: '';
+    position: absolute;
+    top: -30px;
+    left: -30px;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: #4CAF50;
+    opacity: 0.3;
+    z-index: 1;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(0.9); opacity:0.3; }
+    50% { transform: scale(1.2); opacity:0.1; }
+    100% { transform: scale(0.9); opacity:0.3; }
+  }
+
+  /* Buttons */
+  button {
+    padding: 15px 30px;
+    font-size: 18px;
+    border-radius: 50px;
+    border: none;
+    background: #4CAF50;
+    color: white;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(76,175,80,0.6);
+  }
+
+  input[type="text"] {
+    width: 80%;
+    padding: 12px;
+    margin-top: 20px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+  }
+
+  video {
+    width: 100%;
+    max-width: 400px;
+    margin-top: 20px;
+    border-radius: 10px;
+    border: 2px solid #4CAF50;
+  }
+
+  p.feedback {
+    margin-top: 15px;
+    font-weight: bold;
+  }
+
+</style>
+</head>
+<body>
+
+<!-- Landing Page -->
+<section id="landing" class="active">
+  <button id="startBtn">Enter Demo</button>
+</section>
+
+<!-- Dashboard / Create Session -->
+<section id="dashboard">
+  <h2>Create Session</h2>
+  <input type="text" id="sessionName" placeholder="Session Name">
+  <button id="createSessionBtn">Create Session</button>
+</section>
+
+<!-- Lecturer / Student Face Scan -->
+<section id="scan">
+  <h2>Face Scan</h2>
+  <video id="video" autoplay muted></video>
+  <p class="feedback" id="scanFeedback">Please look at the camera</p>
+  <button id="nextBtn">Next</button>
+</section>
+
+<!-- Attendance Page -->
+<section id="attendance">
+  <h2>Attendance Log</h2>
+  <p id="attendanceFeedback">Waiting for students...</p>
+</section>
+
+<script>
+// Sections
+const landing = document.getElementById('landing');
+const dashboard = document.getElementById('dashboard');
+const scan = document.getElementById('scan');
+const attendance = document.getElementById('attendance');
+
+// Buttons
+const startBtn = document.getElementById('startBtn');
+const createSessionBtn = document.getElementById('createSessionBtn');
+const nextBtn = document.getElementById('nextBtn');
+
+// Helper to show sections
+function showSection(section){
+  [landing, dashboard, scan, attendance].forEach(s => s.classList.remove('active'));
+  section.classList.add('active');
+}
+
+// Landing → Dashboard
+startBtn.onclick = () => showSection(dashboard);
+
+// Dashboard → Scan
+createSessionBtn.onclick = () => {
+  if(!document.getElementById('sessionName').value){
+    alert("Enter a session name first!");
+    return;
+  }
+  showSection(scan);
+  startVideoStream();
+}
+
+// Scan → Attendance
+nextBtn.onclick = () => showSection(attendance);
+
+// Webcam setup
+const video = document.getElementById('video');
+async function startVideoStream(){
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+  } catch(err){
+    console.error("Webcam error:", err);
+    document.getElementById('scanFeedback').innerText = "Webcam not available";
+  }
+}
+
+</script>
+</body>
+</html>
