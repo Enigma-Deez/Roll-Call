@@ -1,0 +1,1 @@
+uvicorn face_attendance_backend:app --reload 
