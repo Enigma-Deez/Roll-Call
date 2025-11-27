@@ -4,60 +4,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Face Attendance - Enroll</title>
+    <title>Roll Call Demo - Enroll Student</title>
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../style/style.css">
     <style>
+        /* === Minimal Layout Styles for Enrollment Page === */
         body {
             margin: 0;
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #6a11cb, #2575fc);
             height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: background 0.5s, color 0.5s;
         }
-
         .card {
-            background: #fff;
             padding: 40px;
             border-radius: 20px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
             width: 400px;
             text-align: center;
             position: relative;
-            overflow: hidden;
+            transition: background 0.5s, box-shadow 0.5s;
         }
-
-        .card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(120deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.4) 50%, rgba(255, 255, 255, 0.1) 100%);
-            transform: rotate(25deg);
-            animation: shine 2s infinite;
-        }
-
-        @keyframes shine {
-            0% {
-                transform: rotate(25deg) translateX(-100%) translateY(-100%);
-            }
-
-            50% {
-                transform: rotate(25deg) translateX(100%) translateY(100%);
-            }
-
-            100% {
-                transform: rotate(25deg) translateX(-100%) translateY(-100%);
-            }
-        }
-
-        h2 {
-            margin-bottom: 20px;
-            color: #333;
-        }
+        h2 { margin-bottom: 20px; }
 
         input[type="text"] {
             width: 100%;
@@ -68,31 +39,31 @@
             font-size: 14px;
             transition: all 0.3s ease;
         }
-
         input[type="text"]:focus {
             outline: none;
-            border-color: #6a11cb;
-            box-shadow: 0 0 10px rgba(106, 17, 203, 0.4);
+            border-color: #6a11cb; /* Placeholder focus color */
         }
-
+        
         button {
             width: 100%;
             padding: 12px;
             margin-top: 15px;
-            background: linear-gradient(45deg, #6a11cb, #2575fc);
+            /* Placeholder gradient for primary button */
+            background: linear-gradient(45deg, #4CAF50, #abc2b2); 
             border: none;
             border-radius: 10px;
             color: #fff;
             font-weight: 600;
-            font-size: 16px;
             cursor: pointer;
-            position: relative;
-            overflow: hidden;
             transition: all 0.3s ease;
         }
-
-        button:hover {
-            transform: scale(1.05);
+        button:hover { transform: scale(1.05); }
+        
+        #backToHomeBtn {
+            margin-top: 10px;
+            background: none;
+            border: 1px solid #ccc;
+            color: inherit; /* Inherit text color from theme */
         }
 
         .message {
@@ -100,16 +71,37 @@
             font-size: 14px;
             min-height: 20px;
         }
-
         video {
             border-radius: 10px;
             margin-top: 10px;
             width: 100%;
         }
+        
+        /* THEME TOGGLE BUTTON (Ensuring visibility outside the main app) */
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 28px;
+            color: #333; 
+            cursor: pointer;
+            z-index: 100;
+        }
+        .dark .theme-toggle {
+            color: #f0f0f0; 
+        }
+        
+        /* === Enrollment Specific Text Color Reset (Optional, based on your CSS) === */
+        /* Since we removed all theme-specific coloring, we rely on external CSS now. */
+        /* If text looks wrong, you may need to add a <link rel="stylesheet" href="style.css"> */
+        /* to this file, or define the theme classes here. */
+        
     </style>
 </head>
 
-<body>
+<body class="light">
+    
+    <i id="themeToggle" class="theme-toggle bx bx-sun"></i>
 
     <div class="card">
         <h2>Enroll Student</h2>
@@ -118,31 +110,69 @@
         <video id="video" autoplay playsinline></video>
         <button id="captureBtn">Capture & Enroll</button>
         <div class="message" id="message"></div>
+        <button id="backToHomeBtn" onclick="window.location.href='index.html'">Back to Home</button> 
     </div>
 
     <script>
         const video = document.getElementById('video');
         const captureBtn = document.getElementById('captureBtn');
         const messageEl = document.getElementById('message');
+        const API_ENDPOINT = "http://localhost:8000/students/enroll"; 
+
+        // ===========================
+        // === THEME TOGGLE LOGIC ===
+        // ===========================
+        const themeToggle = document.getElementById("themeToggle");
+        if (themeToggle) {
+            themeToggle.onclick = () => {
+                const body = document.body;
+                if (body.classList.contains("light")) {
+                    body.classList.replace("light", "dark");
+                    themeToggle.classList.replace("bx-sun", "bx-moon");
+                    // Optional: Save preference to local storage
+                    localStorage.setItem('theme', 'dark'); 
+                } else {
+                    body.classList.replace("dark", "light");
+                    themeToggle.classList.replace("bx-moon", "bx-sun");
+                    localStorage.setItem('theme', 'light');
+                }
+            };
+            // Apply saved theme on load
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.body.classList.remove('light', 'dark');
+            document.body.classList.add(savedTheme);
+            themeToggle.classList.toggle('bx-moon', savedTheme === 'dark');
+            themeToggle.classList.toggle('bx-sun', savedTheme === 'light');
+        }
+
+
+        // ==================================
+        // === WEBCAM & ENROLLMENT LOGIC ===
+        // ==================================
 
         // Access webcam
         navigator.mediaDevices.getUserMedia({ video: true })
             .then(stream => { video.srcObject = stream; })
-            .catch(err => { messageEl.textContent = 'Camera access denied'; messageEl.style.color = "red"; });
+            .catch(err => { 
+                messageEl.textContent = 'Camera access denied or failed.'; 
+                messageEl.style.color = "red"; 
+                console.error("Camera error:", err);
+            });
 
         // Capture frame and send to backend
         captureBtn.addEventListener('click', async () => {
             const name = document.getElementById('name').value.trim();
             const matric_no = document.getElementById('matric_no').value.trim();
+            
             if (!name || !matric_no) {
                 messageEl.textContent = "Fill all fields";
                 messageEl.style.color = "red";
                 return;
             }
 
-            // Make sure video has loaded
-            if (video.videoWidth === 0 || video.videoHeight === 0) {
-                messageEl.textContent = "Video not ready. Try again.";
+            // Check if video stream is ready
+            if (video.readyState !== 4 || video.videoWidth === 0 || video.videoHeight === 0) {
+                messageEl.textContent = "Video stream not ready. Ensure camera is active.";
                 messageEl.style.color = "red";
                 return;
             }
@@ -155,6 +185,12 @@
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
             canvas.toBlob(async (blob) => {
+                if (!blob) {
+                    messageEl.textContent = "Error capturing image data.";
+                    messageEl.style.color = "red";
+                    return;
+                }
+
                 const formData = new FormData();
                 formData.append('name', name);
                 formData.append('matric_no', matric_no);
@@ -164,22 +200,22 @@
                 messageEl.style.color = "black";
 
                 try {
-                    const res = await fetch("http://localhost:8000/students/enroll", {
+                    const res = await fetch(API_ENDPOINT, {
                         method: "POST",
                         body: formData
                     });
 
                     const result = await res.json();
 
-                    if (result.student_id) {
-                        messageEl.textContent = `Success! Student ID: ${result.student_id}`;
+                    if (res.ok && result.student_id) {
+                        messageEl.innerHTML = `<i class='bx bx-check-circle'></i> Success! Student ID: **${result.student_id}**`;
                         messageEl.style.color = "green";
 
                         // Clear inputs
                         document.getElementById('name').value = "";
                         document.getElementById('matric_no').value = "";
-                    } else if (result.error) {
-                        messageEl.textContent = `Error: ${result.error}`;
+                    } else if (result.error || !res.ok) {
+                        messageEl.innerHTML = `<i class='bx bx-error-circle'></i> Error: ${result.detail || result.error || res.statusText}`;
                         messageEl.style.color = "red";
                     } else {
                         messageEl.textContent = "Unknown response from server";
@@ -187,7 +223,8 @@
                     }
 
                 } catch (err) {
-                    messageEl.textContent = `Error: ${err.message}`;
+                    console.error("Enrollment API Error:", err);
+                    messageEl.innerHTML = `<i class='bx bx-wifi-off'></i> Network Error: Cannot reach backend (${API_ENDPOINT}).`;
                     messageEl.style.color = "red";
                 }
             }, 'image/jpeg', 0.95);
