@@ -2,7 +2,7 @@
 // === 1. GLOBAL WEBCAM UTILITY FUNCTIONS ===
 // ===========================================
 
-let verificationTimer; // Use a single global timer for clarity
+let verificationTimer;
 
 /**
  * Initializes the webcam stream and assigns it to a video element.
@@ -52,11 +52,11 @@ function stopWebcam(videoId) {
 
 document.addEventListener('DOMContentLoaded', function() {
     
-    // --- Core SPA Navigation Function (UPDATED & ROBUSTIFIED) ---
+    // --- Core SPA Navigation Function ---
     const pages = document.querySelectorAll(".page");
     
     function showPage(id){
-        // 1. Clear any running simulation timers to prevent jumps
+        // 1. Clear any running timers
         clearTimeout(verificationTimer);
         
         // 2. Hide all pages and show the target
@@ -67,16 +67,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // 3. Webcam Management Logic (Stop/Start)
+        // Stop all potentially running webcams first
         stopWebcam("scanVideo");
         stopWebcam("studentScanVideo");
         stopWebcam("endScanVideo");
-        
+        stopWebcam("enrollVideo"); // Crucial: Stop enrollment cam when leaving the enroll page
+
+        // Start only the webcam for the *new* active page
         if (id === "scan") {
             initWebcam("scanVideo");
         } else if (id === "attendance") {
             initWebcam("studentScanVideo");
         } else if (id === "endScan") {
             initWebcam("endScanVideo");
+        } else if (id === "enroll") {
+            // NOTE: We only initialize the webcam here. The enrollment submission is done on the separate file.
+            initWebcam("enrollVideo"); 
         }
         
         // 4. Run Page Simulation Logic
@@ -117,8 +123,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }, 3000);
             // --- Simulated End Session Verification: END ---
+        } else if (id === "enroll") {
+            // This button redirects the user to the separate, working enrollment file
+            const enrollmentRedirectBtn = document.querySelector('#enroll .card .backBtn:first-child');
+            if (enrollmentRedirectBtn) {
+                enrollmentRedirectBtn.onclick = () => {
+                    window.location.href = "enroll.html";
+                };
+            }
         }
-    }
+    } // END showPage function
 
     // --- Navigation Handlers ---
 
@@ -128,13 +142,19 @@ document.addEventListener('DOMContentLoaded', function() {
         startBtn.onclick = () => showPage("scan");
     }
 
-    // 2. End Session Button -> End Scan Verification (#endScan)
+    // 2. New: Landing (enrollNavBtn) -> Enrollment Page (#enroll)
+    const enrollNavBtn = document.getElementById("enrollNavBtn");
+    if (enrollNavBtn) {
+        enrollNavBtn.onclick = () => showPage("enroll");
+    }
+    
+    // 3. End Session Button -> End Scan Verification (#endScan)
     const endSessionBtn = document.getElementById("endSessionBtn");
     if (endSessionBtn) {
         endSessionBtn.onclick = () => showPage("endScan");
     }
     
-    // 3. Generic Back Buttons (Using data-target attribute)
+    // 4. Generic Back Buttons (Using data-target attribute)
     document.querySelectorAll(".backBtn").forEach(btn => {
         btn.onclick = (e) => {
             e.preventDefault();

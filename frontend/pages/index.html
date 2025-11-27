@@ -11,90 +11,92 @@
 
 <i id="themeToggle" class="theme-toggle bx bx-sun"></i>
 
-    <section id="landing" class="page active">
-        <div class="page-content">
-            <h1>Welcome to Roll Call</h1>
-            <button id="startBtn">Enter Demo</button> 
-        </div>
-    </section>
+        <section id="landing" class="page active">
+        <div class="page-content">
+            <h1>Welcome to Roll Call</h1>
+            <p>Start a session or enroll a new student.</p>
+            <button id="startBtn">Start New Session</button> 
+            <a href="enroll.html" class="button-link" style="
+                /* Minimal inline style to make the link look like a button, assumes global button styles might not apply */
+                display: block; 
+                text-align: center;
+                padding: 12px;
+                margin-top: 15px;
+                background: #f0f0f0; 
+                color: #333; 
+                text-decoration: none; 
+                border-radius: 5px;
+            ">Enroll Student</a>
+        </div>
+    </section>
 
-    <section id="scan" class="page">
-        <div class="page-content">
-            <h2>Lecturer Verification</h2>
-            <p class="feedback" id="scanFeedback">Please look at the camera for verification.</p>
-            <video id="scanVideo" autoplay muted></video>
-            
-            <div id="lecturerStatus" style="min-height: 20px; margin-top: 15px;">
-                </div>
-            
-            <button class="backBtn" data-target="landing">Back to Home</button>
-        </div>
-    </section>
+        <section id="scan" class="page">
+        <div class="page-content">
+            <h2>Lecturer Verification</h2>
+            <p class="feedback" id="scanFeedback">Please look at the camera for verification.</p>
+            <video id="scanVideo" autoplay muted></video>
+            <canvas id="scanCanvas" style="display: none;"></canvas>
+            
+            <div id="lecturerStatus" style="min-height: 20px; margin-top: 15px;">
+            </div>
+            
+            <button class="backBtn" data-target="landing">Back to Home</button>
+        </div>
+    </section>
 
-    <section id="attendance" class="page full-width-layout">
-        <div class="attendance-main">
-            <div class="camera-panel">
-                <h2>Live Student Scan</h2>
-                <div id="sessionInfoDisplay">
-    <div class="info-item">
-        <i class='bx bx-book-content'></i>
-        <div class="info-text">
-            <h4>Session</h4>
-            <span id="sessionCourse">Backend/API</span>
-        </div>
-    </div>
-    <div class="info-item">
-        <i class='bx bx-user-circle'></i>
-        <div class="info-text">
-            <h4>Lecturer</h4>
-            <span id="sessionLecturer">Dr. Jane Doe</span>
-        </div>
-    </div>
+        <section id="attendance" class="page full-width-layout">
+        <div class="attendance-main">
+            <div class="camera-panel">
+                <h2>Live Student Scan</h2>
+                <div id="sessionInfoDisplay">
+    <div class="info-item">
+        <i class='bx bx-book-content'></i>
+        <div class="info-text">
+            <h4>Session</h4>
+            <span id="sessionCourse">Backend/API</span>
+        </div>
+    </div>
+    <div class="info-item">
+        <i class='bx bx-user-circle'></i>
+        <div class="info-text">
+            <h4>Lecturer</h4>
+            <span id="sessionLecturer">Dr. Jane Doe</span>
+        </div>
+    </div>
 </div>
-                <video id="studentScanVideo" autoplay muted></video>
-                <p class="feedback" id="scanStatus">Scan ready. Waiting for student...</p>
-<button id="endSessionBtn">End Session & Save Log</button>            </div>
-            
-            <div class="log-sidebar">
-                <h3>Attendance Log (<span id="attendeeCount">0</span>)</h3>
-                <ul id="attendanceList">
-                    </ul>
-            </div>
-        </div>
-    </section>
+                <video id="studentScanVideo" autoplay muted></video>
+                <p class="feedback" id="scanStatus">Scan ready. Waiting for student...</p>
+<button id="endSessionBtn">End Session & Save Log</button>            </div>
+            
+            <div class="log-sidebar">
+                <h3>Attendance Log (<span id="attendeeCount">0</span>)</h3>
+                <ul id="attendanceList">
+                    </ul>
+            </div>
+        </div>
+    </section>
 
-    <section id="endScan" class="page">
-    <div class="page-content">
-        <h2>End Session Verification</h2>
-        <p class="feedback" id="endScanFeedback">Please look at the camera to confirm session closure.</p>
-        <video id="endScanVideo" autoplay muted></video>
-        
-        <div id="endScanStatus" style="min-height: 20px; margin-top: 15px;">
-            </div>
-        
-        <button class="backBtn" data-target="attendance">Cancel</button>
-    </div>
+        <section id="endScan" class="page">
+    <div class="page-content">
+        <h2>End Session Verification</h2>
+        <p class="feedback" id="endScanFeedback">Please look at the camera to confirm session closure.</p>
+        <video id="endScanVideo" autoplay muted></video>
+            <canvas id="endScanCanvas" style="display: none;"></canvas>
+        
+        <div id="endScanStatus" style="min-height: 20px; margin-top: 15px;">
+            </div>
+        
+        <button class="backBtn" data-target="attendance">Cancel</button>
+    </div>
 </section>
 
-    <section id="enroll" class="page">
-        <div class="card">
-            <h2>Enroll Student</h2>
-            <input type="text" id="name" placeholder="Full Name" required>
-            <input type="text" id="matric_no" placeholder="Matric Number" required>
-            <video id="enrollVideo" autoplay playsinline></video>
-            <button id="captureBtn">Capture & Enroll</button>
-            <div class="message" id="message"></div>
-            <button class="backBtn" data-target="landing">Back to Home</button>
-        </div>
-    </section>
-
-    <section id="overview" class="page">
-        <div class="page-content">
-            <h2>Session Overview</h2>
-            <p>Full view of all sessions and attendance records will be displayed here.</p>
-            <button class="backBtn" data-target="landing">Back to Home</button>
-        </div>
-    </section>
-    <script src="../js/page.js"></script>
-    </body>
+        <section id="overview" class="page">
+        <div class="page-content">
+            <h2>Session Overview</h2>
+            <p>Full view of all sessions and attendance records will be displayed here.</p>
+            <button class="backBtn" data-target="landing">Back to Home</button>
+        </div>
+    </section>
+    <script src="../js/page.js"></script>
+    </body>
 </html>
