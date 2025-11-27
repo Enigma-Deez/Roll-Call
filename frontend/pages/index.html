@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Roll Call Demo</title>
-<link rel="stylesheet" href="./style/style.css">
+<link rel="stylesheet" href="../style/style.css">
 <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
 </head>
 <body class="light">
@@ -53,8 +53,7 @@
 </div>
                 <video id="studentScanVideo" autoplay muted></video>
                 <p class="feedback" id="scanStatus">Scan ready. Waiting for student...</p>
-                <button id="endSessionBtn" data-target="landing">End Session & Save Log</button>
-            </div>
+<button id="endSessionBtn">End Session & Save Log</button>            </div>
             
             <div class="log-sidebar">
                 <h3>Attendance Log (<span id="attendeeCount">0</span>)</h3>
@@ -63,6 +62,19 @@
             </div>
         </div>
     </section>
+
+    <section id="endScan" class="page">
+    <div class="page-content">
+        <h2>End Session Verification</h2>
+        <p class="feedback" id="endScanFeedback">Please look at the camera to confirm session closure.</p>
+        <video id="endScanVideo" autoplay muted></video>
+        
+        <div id="endScanStatus" style="min-height: 20px; margin-top: 15px;">
+            </div>
+        
+        <button class="backBtn" data-target="attendance">Cancel</button>
+    </div>
+</section>
 
     <section id="enroll" class="page">
         <div class="card">
@@ -83,7 +95,6 @@
             <button class="backBtn" data-target="landing">Back to Home</button>
         </div>
     </section>
-
     <script src="../js/page.js"></script>
     </body>
 </html>

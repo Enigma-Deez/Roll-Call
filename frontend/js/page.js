@@ -1,12 +1,122 @@
+// ===========================================
+// === 1. GLOBAL WEBCAM UTILITY FUNCTIONS ===
+// ===========================================
+
+let verificationTimer; // Use a single global timer for clarity
+
+/**
+ * Initializes the webcam stream and assigns it to a video element.
+ * @param {string} videoId The ID of the HTML <video> element.
+ */
+function initWebcam(videoId) {
+    const videoElement = document.getElementById(videoId);
+    if (!videoElement) return;
+
+    // Stop any currently running streams first
+    if (videoElement.srcObject) {
+        videoElement.srcObject.getTracks().forEach(track => track.stop());
+    }
+
+    // Start the new stream
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+            videoElement.srcObject = stream;
+            console.log(`Webcam started for: #${videoId}`);
+        })
+        .catch(err => {
+            console.error(`Error accessing webcam for #${videoId}:`, err);
+            const statusElement = document.getElementById(videoId).closest('.page-content, .camera-panel').querySelector('.feedback, #lecturerStatus, #endScanStatus');
+            if (statusElement) {
+                statusElement.innerHTML = '<span style="color: red; font-weight: bold;"><i class="bx bx-error-circle"></i> Camera Access Denied or Failed.</span>';
+            }
+        });
+}
+
+/**
+ * Stops the webcam stream associated with a video element.
+ * @param {string} videoId The ID of the HTML <video> element.
+ */
+function stopWebcam(videoId) {
+    const videoElement = document.getElementById(videoId);
+    if (videoElement && videoElement.srcObject) {
+        videoElement.srcObject.getTracks().forEach(track => track.stop());
+        videoElement.srcObject = null;
+        console.log(`Webcam stopped for: #${videoId}`);
+    }
+}
+
+
+// ==================================================
+// === 2. MAIN DOCUMENT LOAD EVENT LISTENER (SPA) ===
+// ==================================================
+
 document.addEventListener('DOMContentLoaded', function() {
     
-    // --- Core SPA Navigation Function ---
+    // --- Core SPA Navigation Function (UPDATED & ROBUSTIFIED) ---
     const pages = document.querySelectorAll(".page");
+    
     function showPage(id){
+        // 1. Clear any running simulation timers to prevent jumps
+        clearTimeout(verificationTimer);
+        
+        // 2. Hide all pages and show the target
         pages.forEach(p => p.classList.remove("active"));
         const targetPage = document.getElementById(id);
         if (targetPage) {
             targetPage.classList.add("active");
+        }
+
+        // 3. Webcam Management Logic (Stop/Start)
+        stopWebcam("scanVideo");
+        stopWebcam("studentScanVideo");
+        stopWebcam("endScanVideo");
+        
+        if (id === "scan") {
+            initWebcam("scanVideo");
+        } else if (id === "attendance") {
+            initWebcam("studentScanVideo");
+        } else if (id === "endScan") {
+            initWebcam("endScanVideo");
+        }
+        
+        // 4. Run Page Simulation Logic
+        if (id === "scan") {
+            const lecturerStatus = document.getElementById("lecturerStatus");
+            if (lecturerStatus) {
+                lecturerStatus.innerHTML = '<span style="color: blue;"><i class="bx bx-loader-alt bx-spin"></i> Verifying Lecturer...</span>';
+            }
+            
+            // --- Simulated Lecturer Verification: START ---
+            verificationTimer = setTimeout(() => {
+                if (lecturerStatus) {
+                    lecturerStatus.innerHTML = '<span style="color: green; font-weight: bold;"><i class="bx bx-check-circle"></i> Verification Successful: Dr. Jane Doe</span>';
+                    
+                    // TRANSITION TO ATTENDANCE PAGE
+                    setTimeout(() => {
+                        showPage("attendance"); 
+                    }, 2000); 
+                }
+            }, 3000);
+            // --- Simulated Lecturer Verification: END ---
+
+        } else if (id === "endScan") {
+            const endScanStatus = document.getElementById("endScanStatus");
+            if (endScanStatus) {
+                endScanStatus.innerHTML = '<span style="color: blue;"><i class="bx bx-loader-alt bx-spin"></i> Verifying Lecturer to End Session...</span>';
+            }
+
+            // --- Simulated End Session Verification: START ---
+            verificationTimer = setTimeout(() => {
+                if (endScanStatus) {
+                    endScanStatus.innerHTML = '<span style="color: green; font-weight: bold;"><i class="bx bx-check-circle"></i> Verification Complete. Session Log Saved!</span>';
+                    
+                    // TRANSITION TO LANDING PAGE
+                    setTimeout(() => {
+                        showPage("landing"); 
+                    }, 2000); 
+                }
+            }, 3000);
+            // --- Simulated End Session Verification: END ---
         }
     }
 
@@ -18,52 +128,10 @@ document.addEventListener('DOMContentLoaded', function() {
         startBtn.onclick = () => showPage("scan");
     }
 
-    // --- Simulated Lecturer Verification (On #scan page load) ---
-    if (document.getElementById("scan")) {
-        const scanVideo = document.getElementById("scanVideo");
-        
-        if (scanVideo) { 
-            // Simulated Success: Verification happens after 3 seconds
-            setTimeout(() => {
-                const lecturerStatus = document.getElementById("lecturerStatus");
-                if (lecturerStatus) {
-                    lecturerStatus.innerHTML = '<span style="color: green; font-weight: bold;"><i class="bx bx-check-circle"></i> Verification Successful: Dr. Jane Doe</span>';
-                    
-                    // Transition to the main student scanning dashboard (#attendance) after 2 seconds
-                    setTimeout(() => {
-                        showPage("attendance");
-                    }, 2000); 
-                }
-            }, 3000);
-        }
-    }
-
-    // 2. End Session Button -> End Scan Verification
+    // 2. End Session Button -> End Scan Verification (#endScan)
     const endSessionBtn = document.getElementById("endSessionBtn");
     if (endSessionBtn) {
-        // Navigates to the end-of-session verification page
-        endSessionBtn.onclick = () => showPage("endScan"); 
-    }
-    
-    // --- Simulated End Session Verification (On #endScan page load) ---
-    if (document.getElementById("endScan")) {
-        const endScanVideo = document.getElementById("endScanVideo");
-        
-        if (endScanVideo) { 
-            // Simulated Success: Verification happens after 3 seconds
-            setTimeout(() => {
-                const endScanStatus = document.getElementById("endScanStatus");
-                if (endScanStatus) {
-                    // Update status to show save message
-                    endScanStatus.innerHTML = '<span style="color: green; font-weight: bold;"><i class="bx bx-check-circle"></i> Session Log Saved Successfully!</span>';
-                    
-                    // Transition back to Landing after successful save message is shown
-                    setTimeout(() => {
-                        showPage("landing"); 
-                    }, 2000); // 2-second pause to read the success message
-                }
-            }, 3000);
-        }
+        endSessionBtn.onclick = () => showPage("endScan");
     }
     
     // 3. Generic Back Buttons (Using data-target attribute)
@@ -109,7 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById("attendeeCount").textContent = count + 1;
                 count++;
             } else if (count >= dummyAttendees.length) {
-                clearInterval(interval);
+                // Keep the interval running but don't add more students
             }
         }, 2000);
     }
