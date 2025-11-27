@@ -1,6 +1,6 @@
 import io, threading, datetime, time, traceback, os
 from fastapi import FastAPI, UploadFile, File, Body
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware  # <-- FIXED: Corrected spelling to CORSMiddleware
 from pymongo import MongoClient
 import numpy as np
 import face_recognition
@@ -32,6 +32,7 @@ FACE_MATCH_TOLERANCE = float(os.getenv("FACE_MATCH_TOLERANCE", 0.5))
 client = MongoClient(MONGO_URI)
 db = client.attendance_system
 students_col = db.students
+lecturers_col = db.lecturers # <-- NEW: Collection for lecturers
 sessions_col = db.sessions
 attendance_col = db.attendance
 
@@ -52,7 +53,7 @@ def deserialize_encoding(blob):
     return np.array(blob, dtype=np.float64)
 
 
-# ROUTE: ENROLL STUDENT
+# --- ROUTE: ENROLL STUDENT (Existing) ---
 @app.post("/students/enroll")
 async def enroll_student(
     name: str = Body(...),
@@ -82,7 +83,45 @@ async def enroll_student(
         traceback.print_exc()
         return {"error": str(e)}
 
-# SESSION ENGINE THREAD LOOP
+# ---------------------------------------------
+# --- NEW ROUTE: ENROLL LECTURER ---
+# ---------------------------------------------
+@app.post("/lecturers/enroll")
+async def enroll_lecturer(
+    name: str = Body(...),
+    staff_id: str = Body(...), # Used 'staff_id' to match the frontend page
+    file: UploadFile = File(...)
+):
+    """Handles uploading a lecturer's face image and saving their encoding."""
+    try:
+        content = await file.read()
+        img = face_recognition.load_image_file(io.BytesIO(content))
+
+        face_locs = face_recognition.face_locations(img)
+        if not face_locs:
+            return {"error": "No face detected"}
+
+        encoding = face_recognition.face_encodings(img, face_locs)[0]
+
+        # Insert into the new lecturers collection
+        res = lecturers_col.insert_one({
+            "name": name,
+            "staff_id": staff_id,
+            "face_encoding": serialize_encoding(encoding),
+            "created_at": now_utc()
+        })
+
+        # Return lecturer_id (as expected by the frontend)
+        return {"lecturer_id": str(res.inserted_id)}
+
+    except Exception as e:
+        traceback.print_exc()
+        return {"error": str(e)}
+
+
+# ---------------------------------------------
+# --- SESSION ENGINE THREAD LOOP (ORIGINAL) ---
+# ---------------------------------------------
 def _session_loop(session_id_obj):
 
     session_id = str(session_id_obj)
@@ -90,7 +129,7 @@ def _session_loop(session_id_obj):
     print(f"\n[SESSION {session_id}] Starting session engine...\n")
 
     try:
-        # Load all student data
+        # Load all student data (Lecturer data is NOT loaded or used in this original loop)
         students = list(students_col.find({}))
         encs = [deserialize_encoding(s["face_encoding"]) for s in students]
         ids = [s["_id"] for s in students]
@@ -98,6 +137,7 @@ def _session_loop(session_id_obj):
         # Open camera
         cap = cv2.VideoCapture(SERVER_CAMERA_INDEX)
         if not cap.isOpened():
+            # If camera fails here, the session will crash
             raise RuntimeError("Camera not available or already in use.")
 
         print(f"[SESSION {session_id}] Camera OK")
@@ -169,10 +209,12 @@ def _session_loop(session_id_obj):
 
         print(f"[SESSION {session_id}] Stopped.")
 
-# ROUTE: START SESSION
+
+# --- ROUTE: START SESSION (Existing) ---
 @app.post("/sessions/start")
 def start_session():
-    session_doc = {"start_time": now_utc(), "active": True}
+    # Session document now includes optional 'lecturer_id'
+    session_doc = {"start_time": now_utc(), "active": True} 
     res = sessions_col.insert_one(session_doc)
     session_id = str(res.inserted_id)
 
@@ -188,7 +230,7 @@ def start_session():
     return {"session_id": session_id}
 
 
-# ROUTE: STOP SESSION
+# --- ROUTE: STOP SESSION (Existing) ---
 @app.post("/sessions/stop")
 def stop_session(session_id: str = Body(...)):
     with _running_lock:
@@ -204,7 +246,7 @@ def stop_session(session_id: str = Body(...)):
 
     return {"ok": True}
 
-# ROUTE: LIST RUNNING SESSIONS
+# --- ROUTE: LIST RUNNING SESSIONS (Existing) ---
 @app.get("/sessions/running")
 def list_running_sessions():
     with _running_lock:

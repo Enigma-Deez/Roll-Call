@@ -4,12 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roll Call Demo - Enroll Student</title>
+    <title>Roll Call Demo - Unified Enrollment</title>
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../style/style.css">
     <style>
-        /* === Minimal Layout Styles for Enrollment Page === */
+        /* === Minimal Layout Styles for Enrollment Page (Shared) === */
         body {
             margin: 0;
             font-family: 'Poppins', sans-serif;
@@ -41,15 +41,16 @@
         }
         input[type="text"]:focus {
             outline: none;
-            border-color: #6a11cb; /* Placeholder focus color */
+            /* Placeholder focus color: dynamically set by JS */
+            border-color: var(--focus-color, #4CAF50); 
         }
         
         button {
             width: 100%;
             padding: 12px;
             margin-top: 15px;
-            /* Placeholder gradient for primary button */
-            background: linear-gradient(45deg, #4CAF50, #abc2b2); 
+            /* Placeholder gradient: dynamically set by JS */
+            background: var(--button-bg, linear-gradient(45deg, #4CAF50, #abc2b2)); 
             border: none;
             border-radius: 10px;
             color: #fff;
@@ -58,12 +59,12 @@
             transition: all 0.3s ease;
         }
         button:hover { transform: scale(1.05); }
-        
+
         #backToHomeBtn {
             margin-top: 10px;
             background: none;
             border: 1px solid #ccc;
-            color: inherit; /* Inherit text color from theme */
+            color: inherit; 
         }
 
         .message {
@@ -76,8 +77,6 @@
             margin-top: 10px;
             width: 100%;
         }
-        
-        /* THEME TOGGLE BUTTON (Ensuring visibility outside the main app) */
         .theme-toggle {
             position: absolute;
             top: 20px;
@@ -90,11 +89,41 @@
         .dark .theme-toggle {
             color: #f0f0f0; 
         }
-        
-        /* === Enrollment Specific Text Color Reset (Optional, based on your CSS) === */
-        /* Since we removed all theme-specific coloring, we rely on external CSS now. */
-        /* If text looks wrong, you may need to add a <link rel="stylesheet" href="style.css"> */
-        /* to this file, or define the theme classes here. */
+
+        /* === NEW: Role Selector Styles === */
+        .role-selector {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 25px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            padding: 5px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .role-selector label {
+            flex-grow: 1;
+            padding: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #555;
+            transition: background 0.3s, color 0.3s;
+            border-radius: 8px;
+        }
+        .role-selector input[type="radio"] {
+            display: none;
+        }
+        .role-selector input[type="radio"]:checked + label {
+            background: #fff;
+            color: #333;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+        }
+        .dark .role-selector {
+            background: #444;
+        }
+        .dark .role-selector input[type="radio"]:checked + label {
+            background: #555;
+            color: #fff;
+        }
         
     </style>
 </head>
@@ -104,11 +133,23 @@
     <i id="themeToggle" class="theme-toggle bx bx-sun"></i>
 
     <div class="card">
-        <h2>Enroll Student</h2>
+        <h2>Unified Enrollment</h2>
+        
+        <div class="role-selector">
+            <input type="radio" id="roleStudent" name="role" value="student" checked>
+            <label for="roleStudent"><i class='bx bxs-user-detail'></i> Student</label>
+
+            <input type="radio" id="roleLecturer" name="role" value="lecturer">
+            <label for="roleLecturer"><i class='bx bxs-briefcase'></i> Lecturer</label>
+        </div>
+        
         <input type="text" id="name" placeholder="Full Name" required>
-        <input type="text" id="matric_no" placeholder="Matric Number" required>
+
+        <input type="text" id="matric_no_input" placeholder="Matric Number" required class="id-input">
+        <input type="text" id="staff_id_input" placeholder="Staff ID / Employee No." required class="id-input" style="display: none;">
+        
         <video id="video" autoplay playsinline></video>
-        <button id="captureBtn">Capture & Enroll</button>
+        <button id="captureBtn">Capture & Enroll Student</button>
         <div class="message" id="message"></div>
         <button id="backToHomeBtn" onclick="window.location.href='index.html'">Back to Home</button> 
     </div>
@@ -117,38 +158,61 @@
         const video = document.getElementById('video');
         const captureBtn = document.getElementById('captureBtn');
         const messageEl = document.getElementById('message');
-        const API_ENDPOINT = "http://localhost:8000/students/enroll"; 
+        const roleSelector = document.querySelectorAll('input[name="role"]');
+        const matricInput = document.getElementById('matric_no_input');
+        const staffInput = document.getElementById('staff_id_input');
+        const card = document.querySelector('.card');
+
 
         // ===========================
-        // === THEME TOGGLE LOGIC ===
+        // === DYNAMIC UI LOGIC ===
         // ===========================
-        const themeToggle = document.getElementById("themeToggle");
-        if (themeToggle) {
-            themeToggle.onclick = () => {
-                const body = document.body;
-                if (body.classList.contains("light")) {
-                    body.classList.replace("light", "dark");
-                    themeToggle.classList.replace("bx-sun", "bx-moon");
-                    // Optional: Save preference to local storage
-                    localStorage.setItem('theme', 'dark'); 
-                } else {
-                    body.classList.replace("dark", "light");
-                    themeToggle.classList.replace("bx-moon", "bx-sun");
-                    localStorage.setItem('theme', 'light');
-                }
-            };
-            // Apply saved theme on load
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            document.body.classList.remove('light', 'dark');
-            document.body.classList.add(savedTheme);
-            themeToggle.classList.toggle('bx-moon', savedTheme === 'dark');
-            themeToggle.classList.toggle('bx-sun', savedTheme === 'light');
+
+        const API_BASE = "http://localhost:8000";
+        let currentRole = 'student'; // Default role
+
+        function updateRole(role) {
+            currentRole = role;
+            messageEl.textContent = ''; // Clear status message
+
+            // 1. Toggle visibility and required status of ID inputs
+            if (role === 'student') {
+                matricInput.style.display = 'block';
+                staffInput.style.display = 'none';
+                matricInput.required = true;
+                staffInput.required = false;
+
+                captureBtn.textContent = 'Capture & Enroll Student';
+                // Student Theme (Green)
+                document.documentElement.style.setProperty('--focus-color', '#4CAF50');
+                document.documentElement.style.setProperty('--button-bg', 'linear-gradient(45deg, #4CAF50, #abc2b2)');
+            } else {
+                matricInput.style.display = 'none';
+                staffInput.style.display = 'block';
+                staffInput.required = true;
+                matricInput.required = false;
+
+                captureBtn.textContent = 'Capture & Enroll Lecturer';
+                // Lecturer Theme (Blue)
+                document.documentElement.style.setProperty('--focus-color', '#007BFF');
+                document.documentElement.style.setProperty('--button-bg', 'linear-gradient(45deg, #007BFF, #6c88a8)');
+            }
         }
 
+        // Event listener for role change
+        roleSelector.forEach(radio => {
+            radio.addEventListener('change', (event) => {
+                updateRole(event.target.value);
+            });
+        });
 
-        // ==================================
+        // Initialize UI on load (defaults to student)
+        updateRole('student'); 
+
+
+        // ===========================
         // === WEBCAM & ENROLLMENT LOGIC ===
-        // ==================================
+        // ===========================
 
         // Access webcam
         navigator.mediaDevices.getUserMedia({ video: true })
@@ -162,15 +226,27 @@
         // Capture frame and send to backend
         captureBtn.addEventListener('click', async () => {
             const name = document.getElementById('name').value.trim();
-            const matric_no = document.getElementById('matric_no').value.trim();
             
-            if (!name || !matric_no) {
-                messageEl.textContent = "Fill all fields";
+            let idValue, idKey, API_ENDPOINT, resultKey;
+
+            if (currentRole === 'student') {
+                idValue = matricInput.value.trim();
+                idKey = 'matric_no';
+                API_ENDPOINT = `${API_BASE}/students/enroll`;
+                resultKey = 'student_id';
+            } else {
+                idValue = staffInput.value.trim();
+                idKey = 'staff_id';
+                API_ENDPOINT = `${API_BASE}/lecturers/enroll`;
+                resultKey = 'lecturer_id';
+            }
+            
+            if (!name || !idValue) {
+                messageEl.textContent = `Fill all fields for ${currentRole}.`;
                 messageEl.style.color = "red";
                 return;
             }
 
-            // Check if video stream is ready
             if (video.readyState !== 4 || video.videoWidth === 0 || video.videoHeight === 0) {
                 messageEl.textContent = "Video stream not ready. Ensure camera is active.";
                 messageEl.style.color = "red";
@@ -193,7 +269,8 @@
 
                 const formData = new FormData();
                 formData.append('name', name);
-                formData.append('matric_no', matric_no);
+                // Dynamically append the ID (matric_no or staff_id)
+                formData.append(idKey, idValue); 
                 formData.append('file', blob, 'capture.jpg');
 
                 messageEl.textContent = "Uploading...";
@@ -207,13 +284,15 @@
 
                     const result = await res.json();
 
-                    if (res.ok && result.student_id) {
-                        messageEl.innerHTML = `<i class='bx bx-check-circle'></i> Success! Student ID: **${result.student_id}**`;
+                    // Dynamically check for the correct ID key in the response
+                    if (res.ok && result[resultKey]) { 
+                        messageEl.innerHTML = `<i class='bx bx-check-circle'></i> Success! ${currentRole} ID: **${result[resultKey]}**`;
                         messageEl.style.color = "green";
 
                         // Clear inputs
                         document.getElementById('name').value = "";
-                        document.getElementById('matric_no').value = "";
+                        matricInput.value = "";
+                        staffInput.value = "";
                     } else if (result.error || !res.ok) {
                         messageEl.innerHTML = `<i class='bx bx-error-circle'></i> Error: ${result.detail || result.error || res.statusText}`;
                         messageEl.style.color = "red";
@@ -229,6 +308,31 @@
                 }
             }, 'image/jpeg', 0.95);
         });
+
+        // ===========================
+        // === THEME TOGGLE LOGIC === (Keep existing theme logic)
+        // ===========================
+        const themeToggle = document.getElementById("themeToggle");
+        if (themeToggle) {
+            themeToggle.onclick = () => {
+                const body = document.body;
+                if (body.classList.contains("light")) {
+                    body.classList.replace("light", "dark");
+                    themeToggle.classList.replace("bx-sun", "bx-moon");
+                    localStorage.setItem('theme', 'dark'); 
+                } else {
+                    body.classList.replace("dark", "light");
+                    themeToggle.classList.replace("bx-moon", "bx-sun");
+                    localStorage.setItem('theme', 'light');
+                }
+            };
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.body.classList.remove('light', 'dark');
+            document.body.classList.add(savedTheme);
+            themeToggle.classList.toggle('bx-moon', savedTheme === 'dark');
+            themeToggle.classList.toggle('bx-sun', savedTheme === 'light');
+        }
+
     </script>
 
 </body>
