@@ -1,6 +1,6 @@
 import io, threading, datetime, time, traceback, os
 from fastapi import FastAPI, UploadFile, File, Body
-from fastapi.middleware.cors import CORSMiddleware  # <-- FIXED: Corrected spelling to CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 import numpy as np
 import face_recognition
@@ -89,10 +89,9 @@ async def enroll_student(
 @app.post("/lecturers/enroll")
 async def enroll_lecturer(
     name: str = Body(...),
-    staff_id: str = Body(...), # Used 'staff_id' to match the frontend page
+    staff_id: str = Body(...), # Matches the client-side change
     file: UploadFile = File(...)
 ):
-    """Handles uploading a lecturer's face image and saving their encoding."""
     try:
         content = await file.read()
         img = face_recognition.load_image_file(io.BytesIO(content))
@@ -111,7 +110,7 @@ async def enroll_lecturer(
             "created_at": now_utc()
         })
 
-        # Return lecturer_id (as expected by the frontend)
+        # Return lecturer_id (matching the client-side expectation)
         return {"lecturer_id": str(res.inserted_id)}
 
     except Exception as e:
@@ -120,7 +119,7 @@ async def enroll_lecturer(
 
 
 # ---------------------------------------------
-# --- SESSION ENGINE THREAD LOOP (ORIGINAL) ---
+# --- SESSION ENGINE THREAD LOOP (MODIFIED) ---
 # ---------------------------------------------
 def _session_loop(session_id_obj):
 
@@ -129,20 +128,37 @@ def _session_loop(session_id_obj):
     print(f"\n[SESSION {session_id}] Starting session engine...\n")
 
     try:
-        # Load all student data (Lecturer data is NOT loaded or used in this original loop)
+        # Load all student data
         students = list(students_col.find({}))
-        encs = [deserialize_encoding(s["face_encoding"]) for s in students]
-        ids = [s["_id"] for s in students]
+        student_encs = [deserialize_encoding(s["face_encoding"]) for s in students]
+        student_ids = [s["_id"] for s in students]
+        
+        # Load all lecturer data (for optional identification)
+        lecturers = list(lecturers_col.find({}))
+        lecturer_encs = [deserialize_encoding(l["face_encoding"]) for l in lecturers]
+        lecturer_ids = [l["_id"] for l in lecturers]
+
+        # Combine all known faces and IDs for matching
+        all_encs = student_encs + lecturer_encs
+        all_ids = student_ids + lecturer_ids
+        
+        # Determine if an ID belongs to a student or lecturer
+        def get_type_and_id(matched_id):
+            if matched_id in student_ids:
+                return "student", matched_id
+            if matched_id in lecturer_ids:
+                return "lecturer", matched_id
+            return "unknown", None
 
         # Open camera
         cap = cv2.VideoCapture(SERVER_CAMERA_INDEX)
         if not cap.isOpened():
-            # If camera fails here, the session will crash
             raise RuntimeError("Camera not available or already in use.")
 
         print(f"[SESSION {session_id}] Camera OK")
 
-        last_seen = {}
+        last_seen = {} # Tracks all seen individuals (students and lecturer)
+        identified_lecturer = None # Tracks the lecturer for the current session
 
         while True:
             # Stop signal
@@ -164,36 +180,48 @@ def _session_loop(session_id_obj):
             now = now_utc()
 
             for fe in face_encodings:
-                if not encs:
+                if not all_encs:
                     continue
 
-                distances = face_recognition.face_distance(encs, fe)
+                distances = face_recognition.face_distance(all_encs, fe)
                 best_idx = int(np.argmin(distances))
 
                 if distances[best_idx] <= FACE_MATCH_TOLERANCE:
-                    student_id = ids[best_idx]
-                    key = str(student_id)
+                    matched_id = all_ids[best_idx]
+                    entity_type, entity_id = get_type_and_id(matched_id)
+                    key = str(entity_id)
 
-                    # Avoid spam attendance every second
+                    # Avoid spamming updates (Check for all entities)
                     if key in last_seen and (now - last_seen[key]).total_seconds() < 30:
                         continue
 
                     last_seen[key] = now
 
-                    attendance_col.update_one(
-                        {"session_id": session_id_obj, "student_id": student_id},
-                        {
-                            "$setOnInsert": {
-                                "session_id": session_id_obj,
-                                "student_id": student_id,
-                                "first_seen": now,
-                                "status": "present"
+                    if entity_type == "student":
+                        # Record student attendance
+                        attendance_col.update_one(
+                            {"session_id": session_id_obj, "student_id": entity_id},
+                            {
+                                "$setOnInsert": {
+                                    "session_id": session_id_obj,
+                                    "student_id": entity_id,
+                                    "first_seen": now,
+                                    "status": "present"
+                                },
+                                "$set": {"last_seen": now}
                             },
-                            "$set": {"last_seen": now}
-                        },
-                        upsert=True
-                    )
-
+                            upsert=True
+                        )
+                    
+                    elif entity_type == "lecturer" and identified_lecturer is None:
+                        # Identify the lecturer running the session and update the session doc
+                        identified_lecturer = entity_id
+                        sessions_col.update_one(
+                            {"_id": session_id_obj},
+                            {"$set": {"lecturer_id": identified_lecturer, "lecturer_seen_at": now}}
+                        )
+                        print(f"[SESSION {session_id}] Lecturer {identified_lecturer} identified and assigned.")
+            
             cv2.waitKey(1)
 
     except Exception:
